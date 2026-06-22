@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#CF1E29" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ScannerTate" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+<link rel="icon" href="/img/icon-192.png" />
+<title>ScannerTate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --red: #CF1E29;
+  --red-dark: #a01520;
+  --text: #51515C;
+  --text-dark: #343a40;
+  --text-muted: #6c757d;
+  --border: #dee2e6;
+  --bg: #f8f9fa;
+  --white: #ffffff;
+  --green: #28a745;
+  --green-bg: #d1e7dd; --green-text: #0a3622;
+}
+
+html, body { height: 100%; background: #000; color: var(--text); font-family: 'Poppins', sans-serif; overflow: hidden; }
+
+/* ══ APP ══ */
+.app { display: flex; flex-direction: column; height: 100dvh; }
+
+.topbar { background: var(--white); border-bottom: 1px solid var(--border); height: 52px; display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
+.topbar img { height: 28px; width: auto; }
+.topbar-title { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.ws-dot { width: 8px; height: 8px; border-radius: 50%; background: #ced4da; transition: background 0.3s; }
+.ws-dot.connected { background: var(--green); }
+
+/* VISOR */
+.scanner-wrap { flex: 1; position: relative; background: #000; overflow: hidden; }
+
+video#camVideo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+canvas#camCanvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0; pointer-events: none;
+}
+
+.overlay { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.crosshair { width: min(65vw, 240px); height: min(65vw, 240px); position: relative; }
+.crosshair::before, .crosshair::after,
+.crosshair span::before, .crosshair span::after {
+  content: ''; position: absolute; width: 22px; height: 22px;
+  border-color: rgba(255,255,255,0.9); border-style: solid;
+}
+.crosshair::before  { top:0;    left:0;   border-width: 3px 0 0 3px; }
+.crosshair::after   { top:0;    right:0;  border-width: 3px 3px 0 0; }
+.crosshair span::before { bottom:0; left:0;  border-width: 0 0 3px 3px; }
+.crosshair span::after  { bottom:0; right:0; border-width: 0 3px 3px 0; }
+
+.flash { position: absolute; inset: 0; background: rgba(255,255,255,0.3); opacity: 0; pointer-events: none; transition: opacity 0.05s; }
+.flash.show { opacity: 1; }
+.scanner-hint { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; padding: 5px 14px; border-radius: 20px; white-space: nowrap; pointer-events: none; }
+
+/* BOTTOM */
+.bottom { background: var(--white); border-top: 1px solid var(--border); padding: 12px 16px 20px; flex-shrink: 0; }
+
+.last-scan { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; min-height: 48px; display: flex; align-items: center; gap: 10px; }
+.last-scan-icon { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; }
+.last-scan-icon svg { width: 14px; height: 14px; stroke: var(--text-muted); stroke-width: 2; fill: none; }
+.last-scan-icon.ok { background: var(--green-bg); }
+.last-scan-icon.ok svg { stroke: var(--green-text); }
+.last-scan-text { flex: 1; min-width: 0; }
+.last-scan-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dark); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.last-scan-meta  { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* CONTROLES: Switch Scanner / Scanner+Enter */
+.controls { display: flex; align-items: center; gap: 8px; }
+
+.mode-switch { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 3px; flex: 1; }
+.mode-btn { flex: 1; padding: 8px 6px; font-size: 12px; font-weight: 500; font-family: 'Poppins', sans-serif; border: none; background: transparent; color: var(--text-muted); border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.mode-btn svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; fill: none; flex-shrink: 0; }
+.mode-btn.active { background: var(--white); color: var(--text-dark); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.mode-btn.active.enter { color: var(--red); }
+
+.btn-scan { background: var(--red); color: #fff; border: none; border-radius: 6px; padding: 10px 18px; font-size: 13px; font-weight: 600; font-family: 'Poppins', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: filter 0.15s; flex-shrink: 0; }
+.btn-scan:hover { filter: brightness(0.9); }
+.btn-scan svg { width: 15px; height: 15px; stroke: #fff; stroke-width: 2.5; fill: none; }
+.btn-scan.active { background: #343a40; }
+</style>
+</head>
+<body>
+
+<!-- APP -->
+<div class="app">
+  <div class="topbar">
+    <img src="/img/LogoTate.png" alt="Logo" onerror="this.style.display='none'" />
+    <span class="topbar-title">ScannerTate</span>
+    <div class="topbar-actions">
+      <div class="ws-dot" id="wsDot"></div>
+    </div>
+  </div>
+
+  <div class="scanner-wrap">
+    <video id="camVideo" autoplay playsinline muted></video>
+    <canvas id="camCanvas"></canvas>
+    <div class="overlay"><div class="crosshair"><span></span></div></div>
+    <div class="flash" id="flash"></div>
+    <div class="scanner-hint" id="hint">Apuntá la cámara al código</div>
+  </div>
+
+  <div class="bottom">
+    <div class="last-scan">
+      <div class="last-scan-icon" id="lastIcon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      </div>
+      <div class="last-scan-text">
+        <div class="last-scan-value" id="lastValue">—</div>
+        <div class="last-scan-meta"  id="lastMeta">Ningún escaneo aún</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="mode-switch">
+        <button class="mode-btn active" id="modeSimple" onclick="setMode('simple')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Scanner
+        </button>
+        <button class="mode-btn enter" id="modeEnter" onclick="setMode('enter')">
+          <svg viewBox="0 0 24 24"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 01-4 4H4"/></svg>
+          + Enter
+        </button>
+      </div>
+      <button class="btn-scan" id="btnScan" onclick="toggleScan()">
+        <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        Iniciar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// PWA
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
+
+// ── MODO ──────────────────────────────────────────────────────────────────
+let pressEnter = false;
+window.setMode = (m) => {
+  pressEnter = m === "enter";
+  document.getElementById("modeSimple").classList.toggle("active", m === "simple");
+  document.getElementById("modeEnter").classList.toggle("active",  m === "enter");
+};
+
+// ── WEBSOCKET ─────────────────────────────────────────────────────────────
+const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+let ws, wsReady = false;
+
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen  = () => { wsReady = true;  setDot(true);  };
+  ws.onclose = () => { wsReady = false; setDot(false); setTimeout(connectWS, 3000); };
+  ws.onerror = () => ws.close();
+}
+connectWS();
+
+function setDot(on) {
+  document.getElementById("wsDot").className = "ws-dot" + (on ? " connected" : "");
+}
+
+function sendScan(text, format) {
+  if (!wsReady) return;
+  ws.send(JSON.stringify({ type: "scan", text, format, pressEnter }));
+}
+
+// ── SCANNER con BarcodeDetector + fallback ZXing ──────────────────────────
+const video   = document.getElementById("camVideo");
+const canvas  = document.getElementById("camCanvas");
+const ctx     = canvas.getContext("2d", { willReadFrequently: true });
+let scanning  = false;
+let stream    = null;
+let rafId     = null;
+let cooldown  = false;
+
+// Intentar BarcodeDetector (Chrome Android nativo, muy rápido)
+const useNative = "BarcodeDetector" in window;
+let detector = null;
+if (useNative) {
+  detector = new BarcodeDetector({ formats: [
+    "qr_code","ean_13","ean_8","code_128","code_39","code_93",
+    "codabar","data_matrix","itf","pdf417","upc_a","upc_e","aztec"
+  ]});
+}
+
+// ZXing como fallback
+let zxingReader = null;
+async function getZXing() {
+  if (zxingReader) return zxingReader;
+  const { BrowserMultiFormatReader } = await import("https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/esm/index.js");
+  zxingReader = new BrowserMultiFormatReader();
+  return zxingReader;
+}
+
+async function startScan() {
+  if (scanning) return;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    video.srcObject = stream;
+    await video.play();
+    scanning = true;
+    updateBtn(true);
+    document.getElementById("hint").textContent = "Apuntá al código";
+
+    if (useNative) {
+      loopNative();
+    } else {
+      loopZXing();
+    }
+  } catch(e) {
+    alert("No se pudo acceder a la cámara: " + e.message);
+  }
+}
+
+function stopScan() {
+  scanning = false;
+  cancelAnimationFrame(rafId);
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  video.srcObject = null;
+  updateBtn(false);
+  document.getElementById("hint").textContent = "Cámara pausada";
+}
+
+// Loop con BarcodeDetector nativo
+async function loopNative() {
+  if (!scanning) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    try {
+      const barcodes = await detector.detect(video);
+      if (barcodes.length > 0) onDetected(barcodes[0].rawValue, barcodes[0].format);
+    } catch(_) {}
+  }
+  rafId = requestAnimationFrame(loopNative);
+}
+
+// Loop con ZXing (fallback)
+async function loopZXing() {
+  const reader = await getZXing();
+  // ZXing tiene su propio loop interno via decodeFromVideoElement
+  try {
+    await reader.decodeFromVideoElement(video, (result, err) => {
+      if (result && scanning) onDetected(result.getText(), result.getBarcodeFormat?.() ?? "QR/barras");
+    });
+  } catch(e) {
+    // fallback manual
+    loopZXingManual(reader);
+  }
+}
+
+async function loopZXingManual(reader) {
+  if (!scanning) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    try {
+      const img = canvas.toDataURL("image/png");
+      const result = await reader.decodeFromImageUrl(img);
+      if (result) onDetected(result.getText(), "QR/barras");
+    } catch(_) {}
+  }
+  rafId = requestAnimationFrame(() => loopZXingManual(reader));
+}
+
+function onDetected(text, format) {
+  if (cooldown || !text) return;
+  cooldown = true;
+  setTimeout(() => { cooldown = false; }, 2000);
+
+  sendScan(text, format);
+
+  document.getElementById("lastValue").textContent = text;
+  document.getElementById("lastMeta").textContent  = `${format} · ${new Date().toLocaleTimeString()}`;
+  document.getElementById("lastIcon").className    = "last-scan-icon ok";
+
+  const f = document.getElementById("flash");
+  f.classList.add("show");
+  setTimeout(() => f.classList.remove("show"), 120);
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+
+window.toggleScan = () => { scanning ? stopScan() : startScan(); };
+
+function updateBtn(on) {
+  const btn = document.getElementById("btnScan");
+  if (on) {
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pausar`;
+    btn.classList.add("active");
+  } else {
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Iniciar`;
+    btn.classList.remove("active");
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  startScan();
+});
+</script>
+</body>
+</html>

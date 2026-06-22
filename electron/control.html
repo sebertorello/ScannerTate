@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>ScannerTate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red: #CF1E29;
+  --red-dark: #a01520;
+  --text: #51515C;
+  --text-dark: #343a40;
+  --text-muted: #6c757d;
+  --border: #dee2e6;
+  --bg: #f8f9fa;
+  --white: #ffffff;
+  --green: #28a745;
+  --green-bg: #d1e7dd; --green-text: #0a3622;
+}
+
+html, body {
+  height: 100%; background: var(--bg); color: var(--text);
+  font-family: 'Poppins', sans-serif; -webkit-user-select: none; user-select: none;
+}
+
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+.topbar {
+  background: var(--white); border-bottom: 1px solid var(--border);
+  min-height: 56px; display: flex; align-items: center; padding: 8px 16px; gap: 8px; flex-shrink: 0;
+}
+.topbar img { height: 24px; width: auto; flex-shrink: 0; }
+.topbar .name { font-size: 13px; font-weight: 600; color: var(--text-dark); flex-shrink: 0; }
+.topbar .status-pill {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 500; padding: 4px 9px; border-radius: 12px;
+  background: var(--bg); color: var(--text-muted); flex-shrink: 0;
+}
+.status-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: #ced4da; }
+.status-pill.running { background: var(--green-bg); color: var(--green-text); }
+.status-pill.running .dot { background: var(--green); }
+
+.main { flex: 1; padding: 22px 22px 14px; display: flex; flex-direction: column; gap: 16px; align-items: center; overflow-y: auto; }
+
+.qr-card {
+  background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.qr-card img { width: 200px; height: 200px; border-radius: 6px; }
+.qr-placeholder {
+  width: 200px; height: 200px; border-radius: 6px; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--text-muted); text-align: center; padding: 10px;
+}
+.qr-url { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; word-break: break-all; text-align: center; }
+
+.info-row { display: flex; gap: 10px; width: 100%; }
+.info-card {
+  flex: 1; background: var(--white); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; text-align: center;
+}
+.info-card .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.info-card .value { font-size: 13px; font-weight: 600; color: var(--text-dark); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+
+.hint { font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.5; padding: 0 10px; }
+.hint b { color: var(--text-dark); }
+
+.actions { padding: 16px 22px 22px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 13px; font-weight: 600; padding: 11px; border-radius: 8px; border: none;
+  cursor: pointer; font-family: 'Poppins', sans-serif; transition: filter 0.15s, opacity 0.15s;
+}
+.btn:disabled { opacity: 0.6; cursor: default; }
+.btn:not(:disabled):hover { filter: brightness(0.92); }
+.btn-red { background: var(--red); color: #fff; }
+.btn-ghost { background: var(--white); color: var(--text-dark); border: 1px solid var(--border); }
+
+.admin-link { font-size: 11px; color: var(--text-muted); text-align: center; }
+.admin-link a { color: var(--red); text-decoration: none; font-weight: 500; }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.help-btn {
+  border: 1.5px solid var(--red); border-radius: 6px; background: var(--white);
+  color: var(--red); font-size: 11.5px; font-weight: 600; font-family: 'Poppins', sans-serif;
+  padding: 6px 10px; cursor: pointer; white-space: nowrap;
+}
+.help-btn:hover { background: #fdf0f1; }
+
+/* ══ AYUDA / TUTORIAL ══ */
+#helpOverlay {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;
+}
+#helpOverlay.hidden { opacity: 0; pointer-events: none; }
+
+.help-sheet {
+  background: var(--white); border-radius: 12px; width: calc(100% - 32px); max-height: calc(100% - 32px);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.help-header {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.help-header h2 { font-size: 14px; font-weight: 600; color: var(--text-dark); flex: 1; }
+.help-close {
+  width: 22px; height: 22px; border-radius: 50%; border: none; background: var(--bg);
+  color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.help-close svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2.5; fill: none; }
+
+.help-body { overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+.help-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 9px; }
+
+.help-steps { display: flex; flex-direction: column; gap: 8px; }
+.help-step { display: flex; gap: 10px; align-items: flex-start; background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.help-step-num { width: 20px; height: 20px; border-radius: 50%; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.help-step-text { font-size: 12px; color: var(--text-dark); line-height: 1.5; }
+.help-step-text b { color: var(--red); }
+
+.help-chip {
+  display: block; background: #fff3cd; color: #856404;
+  border-radius: 7px; padding: 9px 11px; font-size: 11.5px; line-height: 1.5;
+}
+.help-chip svg { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 5px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <img src="../public/img/LogoTate.png" alt="" onerror="this.style.display='none'" />
+    <span class="name">ScannerTate</span>
+    <div class="topbar-right">
+      <button class="help-btn" id="helpBtn">¿Cómo se usa?</button>
+      <div class="status-pill" id="statusPill">
+        <div class="dot"></div>
+        <span id="statusLabel">Iniciando…</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="qr-card">
+      <img id="qrImg" style="display:none" />
+      <div class="qr-placeholder" id="qrPlaceholder">Servidor detenido</div>
+      <div class="qr-url" id="qrUrl">—</div>
+    </div>
+
+    <div class="info-row">
+      <div class="info-card">
+        <div class="label">IP local</div>
+        <div class="value" id="ipValue">—</div>
+      </div>
+      <div class="info-card">
+        <div class="label">Puerto</div>
+        <div class="value" id="portValue">—</div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Escaneá el QR con el celular para abrir el escáner.<br/>
+      Auto-pegado: <b id="pasteShortcut">—</b> en el cursor activo.
+    </div>
+
+    <div class="admin-link" id="adminLink"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-red" id="toggleBtn" disabled>Iniciar servidor</button>
+  </div>
+
+</div>
+
+<!-- AYUDA -->
+<div id="helpOverlay" class="hidden">
+  <div class="help-sheet">
+    <div class="help-header">
+      <h2>Cómo usar ScannerTate</h2>
+      <button class="help-close" id="helpCloseBtn">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="help-body">
+
+      <div>
+        <div class="help-section-title">📶 Antes de empezar</div>
+        <div class="help-chip">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          El celular y esta PC tienen que estar conectados a la <b>misma red WiFi</b>. Si estás en casa, los dos al WiFi de casa. Si estás en el local, los dos al WiFi del local.
+        </div>
+      </div>
+
+      <div>
+        <div class="help-section-title">Paso 1 — Abrí la app en el celular</div>
+        <div class="help-steps">
+          <div class="help-step"><div class="help-step-num">1</div><div class="help-step-text">Mirá el QR o la URL que muestra esta ventana.</div></div>
+          <div class="help-step"><div class="help-step-num">2</div><div class="help-step-text">Abrí <b>Chrome</b> (Android) o <b>Safari</b> (iPhone) en el celular.</div></div>
+          <div class="help-step"><div class="help-step-num">3</div><div class="help-step-text">Escribí la URL o escaneá el QR con la cámara del celular.</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="help-section-title">Paso 2 — La advertencia de "sitio no seguro"</div>
+        <div class="help-chip" style="margin-bottom:8px">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Es normal, no te asustes. El navegador va a mostrar una pantalla que dice algo como <b>"Tu conexión no es privada"</b> o <b>"Sitio no seguro"</b> porque el certificado es local y no está firmado por una empresa externa.
+        </div>
+        <div class="help-steps">
+          <div class="help-step"><div class="help-step-num">•</div><div class="help-step-text">En <b>Chrome Android:</b> tocá "Configuración avanzada" → "Acceder a [IP] (no seguro)".</div></div>
+          <div class="help-step"><div class="help-step-num">•</div><div class="help-step-text">En <b>Safari iPhone:</b> tocá "Mostrar detalles" → "Visitar este sitio web".</div></div>
+        </div>
+        <div class="help-chip" style="margin-top:8px">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="9 12 12 15 16 10"/></svg>
+          Solo hay que hacerlo una vez por red.
+        </div>
+      </div>
+
+      <div>
+        <div class="help-section-title">Paso 3 — Escaneá</div>
+        <div class="help-steps">
+          <div class="help-step"><div class="help-step-num">1</div><div class="help-step-text">La cámara arranca sola.</div></div>
+          <div class="help-step"><div class="help-step-num">2</div><div class="help-step-text">Apuntá al código QR o de barras.</div></div>
+          <div class="help-step"><div class="help-step-num">3</div><div class="help-step-text">El texto aparece pegado automáticamente donde tengas el cursor en esta PC.</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="help-section-title">Modos de escaneo</div>
+        <div class="help-steps">
+          <div class="help-step"><div class="help-step-num">A</div><div class="help-step-text"><b>Scanner:</b> pega el texto y listo.</div></div>
+          <div class="help-step"><div class="help-step-num">B</div><div class="help-step-text"><b>Scanner + Enter:</b> pega el texto y presiona Enter automáticamente. Ideal para formularios o planillas donde cada código va en un campo distinto.</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="help-section-title">Si algo no funciona</div>
+        <div class="help-steps">
+          <div class="help-step"><div class="help-step-num">•</div><div class="help-step-text">Verificá que el celular y la PC estén en la misma red WiFi.</div></div>
+          <div class="help-step"><div class="help-step-num">•</div><div class="help-step-text">Si la cámara no abre, cerrá y volvé a abrir el navegador en el celu.</div></div>
+          <div class="help-step"><div class="help-step-num">•</div><div class="help-step-text">Si el texto no se pega, hacé clic en el campo donde querés pegar antes de escanear.</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const statusPill   = document.getElementById("statusPill");
+const statusLabel  = document.getElementById("statusLabel");
+const qrImg        = document.getElementById("qrImg");
+const qrPlaceholder= document.getElementById("qrPlaceholder");
+const qrUrl        = document.getElementById("qrUrl");
+const ipValue      = document.getElementById("ipValue");
+const portValue    = document.getElementById("portValue");
+const toggleBtn     = document.getElementById("toggleBtn");
+const adminLink     = document.getElementById("adminLink");
+const pasteShortcut = document.getElementById("pasteShortcut");
+
+pasteShortcut.textContent = navigator.platform.toLowerCase().includes("mac") ? "Cmd+V" : "Ctrl+V";
+
+function render(status) {
+  ipValue.textContent   = status.ip || "—";
+  portValue.textContent = status.port || "—";
+
+  if (status.running) {
+    statusPill.classList.add("running");
+    statusLabel.textContent = "Corriendo";
+    qrImg.src = status.qr;
+    qrImg.style.display = "block";
+    qrPlaceholder.style.display = "none";
+    qrUrl.textContent = status.url;
+    adminLink.innerHTML = `Panel: <a href="#" id="openAdmin">${status.adminUrl}</a>`;
+    toggleBtn.textContent = "Detener servidor";
+    toggleBtn.className = "btn btn-ghost";
+  } else {
+    statusPill.classList.remove("running");
+    statusLabel.textContent = "Detenido";
+    qrImg.style.display = "none";
+    qrPlaceholder.style.display = "flex";
+    qrUrl.textContent = "—";
+    adminLink.innerHTML = "";
+    toggleBtn.textContent = "Iniciar servidor";
+    toggleBtn.className = "btn btn-red";
+  }
+  toggleBtn.disabled = false;
+}
+
+toggleBtn.addEventListener("click", async () => {
+  toggleBtn.disabled = true;
+  const status = window.__lastStatus && window.__lastStatus.running
+    ? await window.api.stop()
+    : await window.api.start();
+  window.__lastStatus = status;
+  render(status);
+});
+
+window.api.onStatusChange((status) => {
+  window.__lastStatus = status;
+  render(status);
+});
+
+window.api.status().then((status) => {
+  window.__lastStatus = status;
+  render(status);
+});
+
+// ── Ayuda ────────────────────────────────────────────────────────────────────
+const helpOverlay  = document.getElementById("helpOverlay");
+const helpBtn      = document.getElementById("helpBtn");
+const helpCloseBtn = document.getElementById("helpCloseBtn");
+
+helpBtn.addEventListener("click", () => helpOverlay.classList.remove("hidden"));
+helpCloseBtn.addEventListener("click", () => helpOverlay.classList.add("hidden"));
+helpOverlay.addEventListener("click", (e) => { if (e.target === helpOverlay) helpOverlay.classList.add("hidden"); });
+</script>
+</body>
+</html>

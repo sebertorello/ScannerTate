@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ScannerTate — Panel</title>
+<link rel="icon" href="/img/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red: #CF1E29;
+  --red-dark: #a01520;
+  --text: #51515C;
+  --text-dark: #343a40;
+  --text-muted: #6c757d;
+  --border: #dee2e6;
+  --bg: #f8f9fa;
+  --white: #ffffff;
+  --green: #28a745;
+  --green-bg: #d1e7dd; --green-text: #0a3622;
+  --warn-bg: #fff3cd;  --warn-text: #856404;
+  --red-bg:   #f8d7da; --red-text: #842029;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; }
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+/* TOPBAR */
+.topbar { background: var(--white); border-bottom: 1px solid var(--border); height: 50px; display: flex; align-items: center; padding: 0 20px; gap: 14px; flex-shrink: 0; }
+.topbar img { height: 28px; width: auto; }
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); }
+.breadcrumb .sep { color: var(--border); }
+.breadcrumb .current { color: var(--red); font-weight: 500; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.ws-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+.ws-dot { width: 7px; height: 7px; border-radius: 50%; background: #ced4da; transition: background 0.3s; }
+.ws-dot.connected { background: var(--green); }
+
+/* BODY */
+.body { display: flex; flex: 1; overflow: hidden; }
+
+/* SIDEBAR */
+.sidebar { width: 200px; background: var(--white); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+.nav-label { font-size: 10px; font-weight: 600; color: #adb5bd; letter-spacing: 0.8px; text-transform: uppercase; padding: 14px 16px 4px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; font-size: 13px; color: var(--text); border-left: 3px solid transparent; transition: background 0.15s; }
+.nav-item:hover { background: var(--bg); }
+.nav-item.active { background: var(--red); border-left-color: var(--red-dark); color: #fff; }
+.nav-item.active svg { stroke: #fff; }
+.nav-item svg { width: 15px; height: 15px; stroke: var(--text-muted); stroke-width: 2; fill: none; flex-shrink: 0; }
+.nav-sep { height: 1px; background: var(--border); margin: 6px 0; }
+
+/* QR del celu */
+.qr-block { padding: 14px 16px; border-top: 1px solid var(--border); margin-top: auto; }
+.qr-label { font-size: 10px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+#qrCanvas { width: 100%; border-radius: 4px; border: 1px solid var(--border); }
+.qr-url { font-size: 10px; color: var(--text-muted); margin-top: 6px; font-family: 'JetBrains Mono', monospace; word-break: break-all; }
+
+/* MAIN */
+.main { flex: 1; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+.page-title { font-size: 16px; font-weight: 600; color: var(--text-dark); }
+.page-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* STATS ROW */
+.stats-row { display: flex; gap: 12px; }
+.stat-card { flex: 1; background: var(--white); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
+.stat-value { font-size: 24px; font-weight: 600; color: var(--text-dark); font-family: 'JetBrains Mono', monospace; }
+.stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* CARD */
+.card { background: var(--white); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.card-header { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
+.card-header svg { width: 15px; height: 15px; stroke: var(--red); stroke-width: 2; fill: none; }
+.card-header .actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* TABLE */
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tbl th { text-align: left; padding: 8px 14px; background: var(--bg); border-bottom: 1px solid var(--border); font-weight: 600; color: #495057; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.tbl td { padding: 10px 14px; border-bottom: 1px solid #f1f3f5; vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: var(--bg); }
+.tbl .mono { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-dark); font-weight: 600; }
+.tbl .meta { font-size: 10px; color: var(--text-muted); }
+
+.badge { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 10px; }
+.badge-ok   { background: var(--green-bg); color: var(--green-text); }
+.badge-err  { background: var(--red-bg);   color: var(--red-text); }
+.badge-fmt  { background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); }
+
+.btn { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 5px; border: none; cursor: pointer; font-family: 'Poppins', sans-serif; transition: filter 0.15s; }
+.btn:hover { filter: brightness(0.9); }
+.btn-ghost { background: var(--white); color: var(--text); border: 1px solid var(--border); }
+.btn-red   { background: var(--red); color: #fff; }
+.btn svg   { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+.empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.empty svg { width: 36px; height: 36px; stroke: #ced4da; stroke-width: 1.5; fill: none; display: block; margin: 0 auto 10px; }
+
+/* STATUS BAR */
+.statusbar { background: var(--white); border-top: 1px solid var(--border); padding: 7px 24px; display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+.status-item { font-size: 11px; color: var(--text-muted); }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: #343a40; color: #fff; font-size: 12px; padding: 10px 18px; border-radius: 6px; opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 999; }
+.toast.show { opacity: 1; transform: translateY(0); }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <img src="/img/LogoTate.png" alt="Logo" onerror="this.style.display='none'" />
+    <div class="breadcrumb">
+      <span>ScannerTate</span>
+      <span class="sep">›</span>
+      <span class="current">Panel</span>
+    </div>
+    <div class="topbar-right">
+      <div class="ws-badge">
+        <div class="ws-dot" id="wsDot"></div>
+        <span id="wsLabel">Desconectado</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="nav-label">Vistas</div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Historial
+      </div>
+      <div class="nav-sep"></div>
+      <div class="nav-item" onclick="window.open('/','_blank')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Abrir en celular
+      </div>
+
+      <!-- QR para abrir en el celu -->
+      <div class="qr-block">
+        <div class="qr-label">Escaneá con el celular</div>
+        <canvas id="qrCanvas"></canvas>
+        <div class="qr-url" id="qrUrl">—</div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div>
+        <div class="page-title">Historial de escaneos</div>
+        <div class="page-sub">Los códigos escaneados desde el celular se tipean automáticamente en la PC</div>
+      </div>
+
+      <!-- STATS -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Escaneos totales</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statOk">0</div>
+          <div class="stat-label">Enviados OK</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statLast">—</div>
+          <div class="stat-label">Último hace</div>
+        </div>
+      </div>
+
+      <!-- TABLA -->
+      <div class="card">
+        <div class="card-header">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Registros
+          <div class="actions">
+            <button class="btn btn-ghost" onclick="copyAll()">
+              <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              Copiar todo
+            </button>
+            <button class="btn btn-ghost" onclick="clearHistory()">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              Limpiar
+            </button>
+          </div>
+        </div>
+        <table class="tbl" id="tbl">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Código</th>
+              <th>Formato</th>
+              <th>Estado</th>
+              <th>Hora</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="6" class="empty">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Ningún escaneo aún. Abrí el scanner en el celular.
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <div class="status-item" id="sbConn">● Desconectado</div>
+    <div class="status-item" id="sbPort">Puerto: <b>—</b></div>
+    <div class="status-item">ScannerTate v1.0</div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- QR Generator (sin dependencias externas) -->
+<script>
+// Mini QR usando API de Google Charts (solo para el admin, no crítico)
+function renderQR(url) {
+  const canvas = document.getElementById("qrCanvas");
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    canvas.width  = img.width;
+    canvas.height = img.height;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+  };
+  const size = 160;
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}`;
+  document.getElementById("qrUrl").textContent = url;
+}
+
+// Generar URL del celular
+const scannerURL = `http://${location.hostname}:${location.port || 3000}`;
+renderQR(scannerURL);
+document.getElementById("sbPort").innerHTML = `Puerto: <b>${location.port || 3000}</b>`;
+</script>
+
+<script>
+// ── WebSocket ────────────────────────────────────────────────────────────────
+const WS_URL = `ws://${location.host}`;
+let ws;
+let history = [];
+
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    setConn(true);
+  };
+  ws.onclose = () => {
+    setConn(false);
+    setTimeout(connectWS, 3000);
+  };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "history") {
+      history = msg.data;
+      renderTable();
+    }
+    if (msg.type === "scanned") {
+      history.unshift(msg.data);
+      renderTable();
+      flash();
+    }
+  };
+}
+connectWS();
+
+function setConn(on) {
+  document.getElementById("wsDot").className   = "ws-dot" + (on ? " connected" : "");
+  document.getElementById("wsLabel").textContent = on ? "Conectado" : "Desconectado";
+  document.getElementById("sbConn").textContent  = on ? "● Conectado" : "● Desconectado";
+  document.getElementById("sbConn").style.color  = on ? "var(--green)" : "var(--red)";
+}
+
+// ── Tabla ────────────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById("tbody");
+  document.getElementById("statTotal").textContent = history.length;
+  document.getElementById("statOk").textContent    = history.filter(h => h.status === "ok").length;
+
+  if (history.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Ningún escaneo aún.
+    </td></tr>`;
+    document.getElementById("statLast").textContent = "—";
+    return;
+  }
+
+  const last = new Date(history[0].ts);
+  const diff = Math.round((Date.now() - last) / 1000);
+  document.getElementById("statLast").textContent = diff < 60 ? `${diff}s` : `${Math.round(diff/60)}m`;
+
+  tbody.innerHTML = history.map((h, i) => `
+    <tr>
+      <td class="meta">${history.length - i}</td>
+      <td class="mono" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(h.text)}">${esc(h.text)}</td>
+      <td><span class="badge badge-fmt">${esc(h.format)}</span></td>
+      <td><span class="badge ${h.status === 'ok' ? 'badge-ok' : 'badge-err'}">${h.status === 'ok' ? '✓ OK' : '✗ Error'}</span></td>
+      <td class="meta">${new Date(h.ts).toLocaleTimeString()}</td>
+      <td>
+        <button class="btn btn-ghost" style="padding:4px 10px" onclick="copyOne('${esc(h.text)}')">
+          <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+// ── Acciones ─────────────────────────────────────────────────────────────────
+function copyOne(text) {
+  navigator.clipboard.writeText(text).then(() => showToast("Copiado"));
+}
+
+function copyAll() {
+  const all = history.map(h => h.text).join("\n");
+  navigator.clipboard.writeText(all).then(() => showToast(`${history.length} códigos copiados`));
+}
+
+function clearHistory() {
+  if (!confirm("¿Borrar el historial?")) return;
+  ws.send(JSON.stringify({ type: "clear_history" }));
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+function flash() {
+  document.title = "▶ Nuevo escaneo — ScannerTate";
+  setTimeout(() => { document.title = "ScannerTate — Panel"; }, 1500);
+}
+
+// Actualizar "último hace X seg" cada 10s
+setInterval(() => { if (history.length) renderTable(); }, 10000);
+</script>
+</body>
+</html>
