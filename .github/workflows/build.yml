@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-mac:
+    name: Build macOS (arm64)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate icons
+        run: npm run icons
+
+      - name: Build .dmg (arm64)
+        run: npx electron-builder --mac --arm64 --publish never
+
+      - name: Upload .dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScannerTate-mac-arm64
+          path: dist/*.dmg
+
+  build-win:
+    name: Build Windows (x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate icons
+        run: npm run icons
+
+      - name: Build .exe (x64)
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Upload .exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScannerTate-win-x64
+          path: dist/*.exe
